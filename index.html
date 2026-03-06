@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>markjason</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="tab-bar"></div>
+      <div id="main-area">
+        <div id="sidebar">
+          <div class="sidebar-header">Open Files</div>
+          <div id="sidebar-list"></div>
+        </div>
+        <div id="editor-pane"></div>
+        <div id="preview-pane"></div>
+      </div>
+    </div>
+    <div id="quick-open-overlay" class="hidden">
+      <div id="quick-open">
+        <input type="text" id="quick-open-input" placeholder="Type to search open files..." />
+        <div id="quick-open-results"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
