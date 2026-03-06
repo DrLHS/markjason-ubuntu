@@ -26,5 +26,6 @@ export const Events = {
   PREVIEW_TOGGLE: "preview:toggle",
   SIDEBAR_TOGGLE: "sidebar:toggle",
   QUICK_OPEN: "quick-open:show",
+  EXPORT_IMAGE: "export:image",
   RENDER_ALL: "render:all",
 } as const;

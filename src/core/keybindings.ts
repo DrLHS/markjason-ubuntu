@@ -47,6 +47,12 @@ export function setupKeybindings(): void {
       return;
     }
 
+    if (ctrl && e.shiftKey && e.key === "E") {
+      e.preventDefault();
+      emit(Events.EXPORT_IMAGE);
+      return;
+    }
+
     if (ctrl && e.key === "Tab") {
       e.preventDefault();
       cycleTab(e.shiftKey ? -1 : 1);

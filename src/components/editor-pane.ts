@@ -15,6 +15,7 @@ import { envExtensions } from "../editors/env-editor";
 
 let currentView: EditorView | null = null;
 let currentTabId: string | null = null;
+let scrollSyncSource: "editor" | "preview" | null = null;
 
 function baseExtensions(tab: TabInfo): Extension[] {
   return [
@@ -113,10 +114,28 @@ export function renderEditorPane(): void {
     : EditorState.create({ doc: tab.content, extensions });
 
   currentView = new EditorView({ state, parent: container });
+
+  // Sync editor scroll -> preview
+  const scroller = currentView.scrollDOM;
+  scroller.addEventListener("scroll", () => {
+    if (scrollSyncSource === "preview") return;
+    scrollSyncSource = "editor";
+    const fraction = scroller.scrollTop / Math.max(1, scroller.scrollHeight - scroller.clientHeight);
+    emit(Events.CONTENT_CHANGED + ":scroll", fraction);
+    requestAnimationFrame(() => { scrollSyncSource = null; });
+  });
 }
 
 export function getCurrentView(): EditorView | null {
   return currentView;
+}
+
+export function scrollEditorToFraction(fraction: number): void {
+  if (!currentView) return;
+  scrollSyncSource = "preview";
+  const scroller = currentView.scrollDOM;
+  scroller.scrollTop = fraction * (scroller.scrollHeight - scroller.clientHeight);
+  requestAnimationFrame(() => { scrollSyncSource = null; });
 }
 
 export function replaceEditorContent(content: string): void {
