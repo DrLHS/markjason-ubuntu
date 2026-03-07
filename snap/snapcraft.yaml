@@ -1,0 +1,35 @@
+name: markjason
+version: '0.1.0'
+summary: Editor for Markdown, JSON, and .env files
+description: |
+  A fast, dark-themed Linux editor built with Tauri v2. Features include
+  CodeMirror 6 syntax highlighting, live synchronized preview, JSON tree
+  view with click-to-copy paths, .env table with sensitive value masking,
+  file watching with auto-reload, export to PNG/JPEG, and session persistence.
+
+base: core22
+grade: stable
+confinement: strict
+
+architectures:
+  - build-on: amd64
+
+parts:
+  markjason:
+    plugin: dump
+    source: src-tauri/target/release/bundle/deb/markjason_0.1.0_amd64.deb
+    source-type: deb
+
+apps:
+  markjason:
+    command: usr/bin/markjason
+    extensions: [gnome]
+    plugs:
+      - home
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - opengl
+      - network
+      - removable-media

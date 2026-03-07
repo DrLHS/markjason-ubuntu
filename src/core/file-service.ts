@@ -1,5 +1,5 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile, writeTextFile, stat } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -7,6 +7,8 @@ import {
   setActiveTab, getActiveTab, type TabInfo,
 } from "./state";
 import { emit, Events } from "./events";
+
+const LARGE_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 
 // Track last-known content per path to avoid false reloads
 // (e.g. after we save a file, the poll watcher will fire)
@@ -35,9 +37,25 @@ export async function openFile(filePath: string): Promise<void> {
     return;
   }
 
-  const content = await readTextFile(filePath);
   const fileName = filePath.split("/").pop() || filePath;
   const fileType = detectFileType(fileName);
+
+  // Large file guard
+  let isLarge = false;
+  try {
+    const info = await stat(filePath);
+    if (info.size > LARGE_FILE_BYTES) {
+      isLarge = true;
+      const sizeMB = (info.size / (1024 * 1024)).toFixed(1);
+      if (!confirm(`"${fileName}" is ${sizeMB} MB. Large files may be slow. Open anyway?`)) {
+        return;
+      }
+    }
+  } catch {
+    // stat might fail on some filesystems, proceed anyway
+  }
+
+  const content = await readTextFile(filePath);
   const tab: TabInfo = {
     id: generateTabId(),
     filePath,
@@ -46,6 +64,7 @@ export async function openFile(filePath: string): Promise<void> {
     dirty: false,
     editorState: null,
     content,
+    previewDisabled: isLarge,
   };
 
   lastSavedContent.set(filePath, content);

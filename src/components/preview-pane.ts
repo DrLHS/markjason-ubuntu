@@ -48,6 +48,12 @@ export function renderPreviewPane(): void {
 
   container.classList.add("visible");
 
+  // Large file guard — disable preview
+  if (tab.previewDisabled) {
+    container.innerHTML = `<div style="color: var(--text-muted); padding: 16px;">Preview disabled for large files (&gt;5 MB).</div>`;
+    return;
+  }
+
   // Debounce updates
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {

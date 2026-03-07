@@ -11,6 +11,7 @@ export interface TabInfo {
   dirty: boolean;
   editorState: EditorState | null;
   content: string;
+  previewDisabled?: boolean;
 }
 
 export interface AppState {
