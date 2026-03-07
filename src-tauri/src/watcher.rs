@@ -1,10 +1,12 @@
-use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
+use notify_debouncer_mini::{new_debouncer_opt, DebouncedEventKind};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
 
-type Debouncer = notify_debouncer_mini::Debouncer<notify::RecommendedWatcher>;
+// Use PollWatcher so file-change detection works on all filesystems
+// including /mnt/ (DrvFs) in WSL2 where inotify is not supported.
+type Debouncer = notify_debouncer_mini::Debouncer<notify::PollWatcher>;
 
 pub struct WatcherState {
     watchers: Mutex<HashMap<String, Debouncer>>,
@@ -33,15 +35,29 @@ pub fn watch_file(
     let emit_path = path.clone();
     let app_handle = app.clone();
 
-    let mut debouncer = new_debouncer(Duration::from_millis(500), move |res: Result<Vec<notify_debouncer_mini::DebouncedEvent>, notify::Error>| {
-        if let Ok(events) = res {
-            for event in events {
-                if event.kind == DebouncedEventKind::Any {
-                    let _ = app_handle.emit("file-changed", serde_json::json!({ "path": emit_path }));
+    let config = notify_debouncer_mini::Config::default()
+        .with_timeout(Duration::from_millis(500))
+        .with_notify_config(
+            notify::Config::default()
+                .with_poll_interval(Duration::from_secs(2)),
+        );
+
+    let mut debouncer = new_debouncer_opt::<_, notify::PollWatcher>(
+        config,
+        move |res: Result<Vec<notify_debouncer_mini::DebouncedEvent>, notify::Error>| {
+            if let Ok(events) = res {
+                for event in events {
+                    if event.kind == DebouncedEventKind::Any {
+                        log::info!("File changed: {}", emit_path);
+                        let _ = app_handle.emit(
+                            "file-changed",
+                            serde_json::json!({ "path": emit_path }),
+                        );
+                    }
                 }
             }
-        }
-    })
+        },
+    )
     .map_err(|e| e.to_string())?;
 
     debouncer

@@ -4,7 +4,7 @@ import { setupFileWatchListener } from "./core/file-service";
 import { getState, getActiveTab } from "./core/state";
 import { renderTabBar } from "./components/tab-bar";
 import { renderSidebar } from "./components/sidebar";
-import { renderEditorPane, replaceEditorContent } from "./components/editor-pane";
+import { renderEditorPane, replaceEditorContent, forceRecreateEditor } from "./components/editor-pane";
 import { renderPreviewPane, togglePreview, initPreviewScrollSync } from "./components/preview-pane";
 import { setupQuickOpen, showQuickOpen } from "./components/quick-open";
 import { exportPreviewAsImage } from "./core/export-image";
@@ -32,14 +32,24 @@ on(Events.SIDEBAR_TOGGLE, () => {
 });
 on(Events.QUICK_OPEN, showQuickOpen);
 on(Events.EXPORT_IMAGE, exportPreviewAsImage);
-on(Events.FILE_EXTERNAL_CHANGE, (_tabId: string, _path: string, newContent?: string) => {
-  if (newContent !== undefined) {
-    const tab = getActiveTab();
-    if (tab && tab.id === _tabId) {
-      replaceEditorContent(newContent);
+on(Events.FILE_EXTERNAL_CHANGE, (tabId: string, _path: string, newContent: string, isDirty: boolean) => {
+  if (isDirty) {
+    const reload = confirm(`File "${_path.split("/").pop()}" was modified externally. Reload and lose local changes?`);
+    if (!reload) return;
+    // User chose to reload — update the tab
+    const state = getState();
+    const tab = state.tabs.find((t) => t.id === tabId);
+    if (tab) {
+      tab.content = newContent;
+      tab.editorState = null;
+      tab.dirty = false;
     }
-    renderAll();
   }
+  const active = getActiveTab();
+  if (active && active.id === tabId) {
+    forceRecreateEditor();
+  }
+  renderAll();
 });
 
 // Initialize

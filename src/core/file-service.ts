@@ -8,6 +8,10 @@ import {
 } from "./state";
 import { emit, Events } from "./events";
 
+// Track last-known content per path to avoid false reloads
+// (e.g. after we save a file, the poll watcher will fire)
+const lastSavedContent = new Map<string, string>();
+
 export async function openFileDialog(): Promise<void> {
   const result = await open({
     multiple: true,
@@ -44,14 +48,15 @@ export async function openFile(filePath: string): Promise<void> {
     content,
   };
 
+  lastSavedContent.set(filePath, content);
   addTab(tab);
   emit(Events.TAB_OPENED, tab);
 
   // Start watching
   try {
     await invoke("watch_file", { path: filePath });
-  } catch (_) {
-    // watcher not available in dev sometimes
+  } catch (e) {
+    console.warn("File watcher failed:", e);
   }
 }
 
@@ -75,6 +80,7 @@ export async function saveCurrentFile(): Promise<void> {
   }
 
   await writeTextFile(tab.filePath, tab.content);
+  lastSavedContent.set(tab.filePath, tab.content);
   tab.dirty = false;
   emit(Events.FILE_SAVED, tab.id);
 }
@@ -85,13 +91,26 @@ export function setupFileWatchListener(): void {
     const tab = findTabByPath(path);
     if (!tab) return;
 
+    let newContent: string;
+    try {
+      newContent = await readTextFile(path);
+    } catch {
+      return; // file might have been deleted
+    }
+
+    // Skip if content hasn't actually changed (e.g. after our own save)
+    const lastKnown = lastSavedContent.get(path);
+    if (newContent === lastKnown || newContent === tab.content) return;
+
     if (tab.dirty) {
-      emit(Events.FILE_EXTERNAL_CHANGE, tab.id, path);
+      // File has unsaved local edits — ask the user
+      emit(Events.FILE_EXTERNAL_CHANGE, tab.id, path, newContent, true);
     } else {
-      const content = await readTextFile(path);
-      tab.content = content;
+      // Clean file — reload silently
+      tab.content = newContent;
       tab.editorState = null;
-      emit(Events.FILE_EXTERNAL_CHANGE, tab.id, path, content);
+      lastSavedContent.set(path, newContent);
+      emit(Events.FILE_EXTERNAL_CHANGE, tab.id, path, newContent, false);
     }
   });
 }

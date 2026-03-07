@@ -127,6 +127,14 @@ export function renderEditorPane(): void {
   });
 }
 
+export function forceRecreateEditor(): void {
+  if (currentView) {
+    currentView.destroy();
+    currentView = null;
+  }
+  currentTabId = null;
+}
+
 export function getCurrentView(): EditorView | null {
   return currentView;
 }
