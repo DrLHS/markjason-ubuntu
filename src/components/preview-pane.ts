@@ -5,28 +5,34 @@ import { on, Events } from "../core/events";
 import { renderJsonTree } from "../editors/json-tree-view";
 import { renderEnvTable } from "../editors/env-table-view";
 import { scrollEditorToFraction } from "./editor-pane";
+import { previewScrolled } from "../core/scroll-sync";
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-let scrollSyncSource: "editor" | "preview" | null = null;
 
 export function initPreviewScrollSync(): void {
   const container = document.getElementById("preview-pane")!;
 
   // Editor scroll -> preview scroll
   on(Events.CONTENT_CHANGED + ":scroll", (fraction: number) => {
-    if (scrollSyncSource === "preview") return;
-    scrollSyncSource = "editor";
-    container.scrollTop = fraction * (container.scrollHeight - container.clientHeight);
-    requestAnimationFrame(() => { scrollSyncSource = null; });
+    const maxScroll = container.scrollHeight - container.clientHeight;
+    if (maxScroll <= 0) return;
+    container.scrollTop = Math.round(fraction * maxScroll);
   });
 
-  // Preview scroll -> editor scroll
+  // Preview scroll -> editor scroll (only on user-initiated scroll)
   container.addEventListener("scroll", () => {
-    if (scrollSyncSource === "editor") return;
-    scrollSyncSource = "preview";
-    const fraction = container.scrollTop / Math.max(1, container.scrollHeight - container.clientHeight);
-    scrollEditorToFraction(fraction);
-    requestAnimationFrame(() => { scrollSyncSource = null; });
+    const maxScroll = container.scrollHeight - container.clientHeight;
+    if (maxScroll <= 0) return;
+    const fraction = container.scrollTop / maxScroll;
+    previewScrolled(fraction, scrollEditorToFraction);
+  });
+
+  // Prevent preview from stealing focus — keep it on the editor
+  container.addEventListener("mousedown", (e) => {
+    // Allow clicks on interactive elements (buttons, links, toggle-mask)
+    const target = e.target as HTMLElement;
+    if (target.closest("button, a, .toggle-mask, .node-header")) return;
+    e.preventDefault();
   });
 }
 

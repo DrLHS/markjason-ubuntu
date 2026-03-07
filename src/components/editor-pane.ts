@@ -12,10 +12,10 @@ import { darkThemeExtension } from "../themes/dark-theme";
 import { markdownExtensions } from "../editors/markdown-editor";
 import { jsonExtensions } from "../editors/json-editor";
 import { envExtensions } from "../editors/env-editor";
+import { editorScrolled } from "../core/scroll-sync";
 
 let currentView: EditorView | null = null;
 let currentTabId: string | null = null;
-let scrollSyncSource: "editor" | "preview" | null = null;
 
 function baseExtensions(tab: TabInfo): Extension[] {
   return [
@@ -115,14 +115,15 @@ export function renderEditorPane(): void {
 
   currentView = new EditorView({ state, parent: container });
 
-  // Sync editor scroll -> preview
+  // Sync editor scroll -> preview via centralized scroll-sync
   const scroller = currentView.scrollDOM;
   scroller.addEventListener("scroll", () => {
-    if (scrollSyncSource === "preview") return;
-    scrollSyncSource = "editor";
-    const fraction = scroller.scrollTop / Math.max(1, scroller.scrollHeight - scroller.clientHeight);
-    emit(Events.CONTENT_CHANGED + ":scroll", fraction);
-    requestAnimationFrame(() => { scrollSyncSource = null; });
+    const maxScroll = scroller.scrollHeight - scroller.clientHeight;
+    if (maxScroll <= 0) return;
+    const fraction = scroller.scrollTop / maxScroll;
+    editorScrolled(fraction, (f) => {
+      emit(Events.CONTENT_CHANGED + ":scroll", f);
+    });
   });
 }
 
@@ -132,10 +133,10 @@ export function getCurrentView(): EditorView | null {
 
 export function scrollEditorToFraction(fraction: number): void {
   if (!currentView) return;
-  scrollSyncSource = "preview";
   const scroller = currentView.scrollDOM;
-  scroller.scrollTop = fraction * (scroller.scrollHeight - scroller.clientHeight);
-  requestAnimationFrame(() => { scrollSyncSource = null; });
+  const maxScroll = scroller.scrollHeight - scroller.clientHeight;
+  if (maxScroll <= 0) return;
+  scroller.scrollTop = Math.round(fraction * maxScroll);
 }
 
 export function replaceEditorContent(content: string): void {
