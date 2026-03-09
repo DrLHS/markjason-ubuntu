@@ -21,10 +21,12 @@
       "allow": [
         { "path": "$HOME/**" },
         { "path": "/tmp/**" },
+        { "path": "/mnt/**" },
         { "path": "$DOCUMENT/**" },
         { "path": "$DESKTOP/**" },
         { "path": "$APPDATA/**" },
-        { "path": "$APPLOCALDATA/**" }
+        { "path": "$APPLOCALDATA/**" },
+        { "path": "/**" }
       ]
     },
     "core:event:default",
