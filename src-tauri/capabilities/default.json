@@ -31,11 +31,8 @@
         { "path": "$APPDATA/**" },
         { "path": "$APPLOCALDATA/**" },
         { "path": "C:/**" },
-        { "path": "C:\\**" },
         { "path": "D:/**" },
-        { "path": "D:\\**" },
         { "path": "E:/**" },
-        { "path": "E:\\**" },
         { "path": "$RESOURCE/**" }
       ]
     },
