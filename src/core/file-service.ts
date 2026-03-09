@@ -15,17 +15,23 @@ const LARGE_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 const lastSavedContent = new Map<string, string>();
 
 export async function openFileDialog(): Promise<void> {
-  const result = await open({
-    multiple: true,
-    filters: [
-      { name: "Supported Files", extensions: ["md", "markdown", "json", "jsonc", "env"] },
-      { name: "All Files", extensions: ["*"] },
-    ],
-  });
-  if (!result) return;
-  const paths = Array.isArray(result) ? result : [result];
-  for (const p of paths) {
-    await openFile(p);
+  try {
+    const result = await open({
+      multiple: true,
+      filters: [
+        { name: "Supported Files", extensions: ["md", "markdown", "json", "jsonc", "env"] },
+        { name: "All Files", extensions: ["*"] },
+      ],
+    });
+    if (!result) return;
+    const items = Array.isArray(result) ? result : [result];
+    for (const item of items) {
+      // Dialog may return string paths or objects with a `path` property
+      const p = typeof item === "string" ? item : (item as any).path ?? String(item);
+      if (p) await openFile(p);
+    }
+  } catch (e) {
+    console.error("Open dialog failed:", e);
   }
 }
 
@@ -37,7 +43,8 @@ export async function openFile(filePath: string): Promise<void> {
     return;
   }
 
-  const fileName = filePath.split("/").pop() || filePath;
+  // Handle both / and \ path separators
+  const fileName = filePath.split(/[/\\]/).pop() || filePath;
   const fileType = detectFileType(fileName);
 
   // Large file guard
@@ -55,7 +62,15 @@ export async function openFile(filePath: string): Promise<void> {
     // stat might fail on some filesystems, proceed anyway
   }
 
-  const content = await readTextFile(filePath);
+  let content: string;
+  try {
+    content = await readTextFile(filePath);
+  } catch (e) {
+    console.error("Failed to read file:", filePath, e);
+    alert(`Could not open "${fileName}": ${e}`);
+    return;
+  }
+
   const tab: TabInfo = {
     id: generateTabId(),
     filePath,
@@ -94,14 +109,19 @@ export async function saveCurrentFile(): Promise<void> {
     });
     if (!path) return;
     tab.filePath = path;
-    tab.fileName = path.split("/").pop() || path;
+    tab.fileName = path.split(/[/\\]/).pop() || path;
     tab.fileType = detectFileType(tab.fileName);
   }
 
-  await writeTextFile(tab.filePath, tab.content);
-  lastSavedContent.set(tab.filePath, tab.content);
-  tab.dirty = false;
-  emit(Events.FILE_SAVED, tab.id);
+  try {
+    await writeTextFile(tab.filePath, tab.content);
+    lastSavedContent.set(tab.filePath, tab.content);
+    tab.dirty = false;
+    emit(Events.FILE_SAVED, tab.id);
+  } catch (e) {
+    console.error("Failed to save file:", tab.filePath, e);
+    alert(`Could not save "${tab.fileName}": ${e}`);
+  }
 }
 
 export function setupFileWatchListener(): void {
