@@ -1,11 +1,17 @@
 name: markjason
 version: '0.1.0'
+title: markjason
 summary: Editor for Markdown, JSON, and .env files
 description: |
   A fast, dark-themed Linux editor built with Tauri v2. Features include
   CodeMirror 6 syntax highlighting, live synchronized preview, JSON tree
   view with click-to-copy paths, .env table with sensitive value masking,
   file watching with auto-reload, export to PNG/JPEG, and session persistence.
+license: MIT
+contact: https://github.com/DrLHS/markjason-ubuntu/issues
+issues: https://github.com/DrLHS/markjason-ubuntu/issues
+source-code: https://github.com/DrLHS/markjason-ubuntu
+website: https://github.com/DrLHS/markjason-ubuntu
 
 base: core22
 grade: stable
@@ -14,16 +20,26 @@ confinement: strict
 architectures:
   - build-on: amd64
 
+layout:
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/webkit2gtk-4.1:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/webkit2gtk-4.1
+
 parts:
   markjason:
     plugin: dump
     source: src-tauri/target/release/bundle/deb/markjason_0.1.0_amd64.deb
     source-type: deb
+    stage-packages:
+      - libwebkit2gtk-4.1-0
+      - libgtk-3-0
+      - libayatana-appindicator3-1
 
 apps:
   markjason:
     command: usr/bin/markjason
-    extensions: [gnome]
+    environment:
+      WEBKIT_DISABLE_COMPOSITING_MODE: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
     plugs:
       - home
       - desktop
@@ -33,3 +49,5 @@ apps:
       - opengl
       - network
       - removable-media
+      - gsettings
+      - unity7
