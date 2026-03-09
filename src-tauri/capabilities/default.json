@@ -24,13 +24,17 @@
         { "path": "$HOME/**" },
         { "path": "/tmp/**" },
         { "path": "/mnt/**" },
+        { "path": "/home/**" },
+        { "path": "/root/**" },
         { "path": "$DOCUMENT/**" },
         { "path": "$DESKTOP/**" },
         { "path": "$APPDATA/**" },
         { "path": "$APPLOCALDATA/**" },
-        { "path": "/**" },
+        { "path": "C:/**" },
         { "path": "C:\\**" },
+        { "path": "D:/**" },
         { "path": "D:\\**" },
+        { "path": "E:/**" },
         { "path": "E:\\**" },
         { "path": "$RESOURCE/**" }
       ]
