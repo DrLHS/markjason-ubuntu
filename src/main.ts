@@ -9,6 +9,7 @@ import { renderEditorPane, replaceEditorContent, forceRecreateEditor } from "./c
 import { renderPreviewPane, togglePreview, initPreviewScrollSync } from "./components/preview-pane";
 import { setupQuickOpen, showQuickOpen } from "./components/quick-open";
 import { exportPreviewAsImage } from "./core/export-image";
+import { listen } from "@tauri-apps/api/event";
 
 function renderAll(): void {
   renderTabBar();
@@ -89,9 +90,25 @@ async function restoreSession(): Promise<void> {
   }
 }
 
+// Listen for files passed via CLI arguments (emitted from Rust backend)
+async function openCliFiles(): Promise<void> {
+  listen<string[]>("open-files", async (event) => {
+    for (const path of event.payload) {
+      try {
+        await openFile(path);
+      } catch (e) {
+        console.warn("Failed to open CLI file:", path, e);
+      }
+    }
+    renderAll();
+    persistSession();
+  });
+}
+
 // Initialize
 setupKeybindings();
 setupQuickOpen();
 setupFileWatchListener();
 initPreviewScrollSync();
+openCliFiles();
 restoreSession().then(() => renderAll());
